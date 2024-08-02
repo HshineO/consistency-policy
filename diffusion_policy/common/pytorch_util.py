@@ -3,9 +3,9 @@ import collections
 import torch
 import torch.nn as nn
 
-def dict_apply(
-        x: Dict[str, torch.Tensor], 
-        func: Callable[[torch.Tensor], torch.Tensor]
+def dict_apply(  #对字典内的所有对象使用func函数变换，返回新的字典
+        x: Dict[str, torch.Tensor],   # 输入是一个字典,字典的键是字符串,值是 PyTorch 张量
+        func: Callable[[torch.Tensor], torch.Tensor] # 输入是一个函数,接受一个 PyTorch 张量并返回一个 PyTorch 张量。
         ) -> Dict[str, torch.Tensor]:
     result = dict()
     for key, value in x.items():

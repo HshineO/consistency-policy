@@ -36,6 +36,9 @@ import time
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
+# 创建一个上下文管理器(context manager)。上下文管理器是 Python 中用于管理资源生命周期的一种对象,比如文件或数据库连接。
+# 在这个例子中,Timer 上下文管理器用于测量代码块的执行时间。
+
 @contextmanager
 def Timer(name):
     start_time = time.time()
@@ -73,7 +76,7 @@ class EDMWorkspace(BaseWorkspace):
     def run(self):
         cfg = copy.deepcopy(self.cfg)
 
-        # resume training
+        # resume training 从 check point 恢复训练
         if cfg.training.resume:
             if cfg.training.resume_path != "None":
                 print(f"Resuming from checkpoint {cfg.training.resume_path}")
@@ -94,8 +97,8 @@ class EDMWorkspace(BaseWorkspace):
             # configure dataset
             dataset: BaseImageDataset
             dataset = hydra.utils.instantiate(cfg.task.dataset)
-            assert isinstance(dataset, BaseImageDataset)
-            train_dataloader = DataLoader(dataset, **cfg.dataloader)
+            assert isinstance(dataset, BaseImageDataset) # 检查创建的 dataset 是否为指定类型
+            train_dataloader = DataLoader(dataset, **cfg.dataloader) # **cfg.dataloader语法将数据加载器的配置参数(如批大小、是否洗牌、工作进程数等)解包后传递给DataLoader构造函数。
             normalizer = dataset.get_normalizer()
 
             # configure validation dataset
@@ -106,7 +109,7 @@ class EDMWorkspace(BaseWorkspace):
             if cfg.training.use_ema:
                 self.ema_model.set_normalizer(normalizer)
 
-            # configure lr scheduler
+            # configure lr scheduler 学习率调度器
             lr_scheduler = get_scheduler(
                 cfg.training.lr_scheduler,
                 optimizer=self.optimizer,
@@ -176,10 +179,12 @@ class EDMWorkspace(BaseWorkspace):
         # training loop
         log_path = os.path.join(self.output_dir, 'logs.json.txt')
 
+        # 这一行创建了一个从 0 到 self.model.noise_scheduler.bins-1 的 PyTorch 张量,作为时间步长索引。
         timesteps = torch.arange(0, self.model.noise_scheduler.bins, device=device)
         b, next_b = self.model.noise_scheduler.timesteps_to_times(timesteps[:-1]), self.model.noise_scheduler.timesteps_to_times(timesteps[1:])
+        # timesteps[:-1] 选取一个序列中除了最后一个元素之外的所有元素。 timesteps[1:]用于获取一个序列中从第二个元素开始到最后的所有元素
 
-
+        # with一个上下文管理器
         with JsonLogger(log_path) as json_logger:
             for local_epoch_idx in range(cfg.training.num_epochs):
                 step_log = dict()
@@ -191,6 +196,7 @@ class EDMWorkspace(BaseWorkspace):
                         for batch_idx, batch in enumerate(tepoch):
                             # device transfer
                             batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
+                            # 对字典内的所有对象使用func函数变换，返回新的字典  这里都放进指定device
                             if train_sampling_batch is None:
                                 train_sampling_batch = batch
 
@@ -211,7 +217,7 @@ class EDMWorkspace(BaseWorkspace):
 
                             # logging
                             raw_loss_cpu = raw_loss.item()
-                            tepoch.set_postfix(loss=raw_loss_cpu, refresh=False)
+                            tepoch.set_postfix(loss=raw_loss_cpu, refresh=False) # 进度条后缀
                             train_losses.append(raw_loss_cpu)
                             step_log = {
                                 'train_loss': raw_loss_cpu,
@@ -241,7 +247,8 @@ class EDMWorkspace(BaseWorkspace):
                 if cfg.training.use_ema:
                     policy = self.ema_model
                 policy.eval()
-
+                
+                # 训练一定轮次后仿真验证
                 # run rollout --- here we interface with the simulator itself via env_runner
                 if (self.epoch % cfg.training.rollout_every) == 0 and cfg.training.online_rollouts:
                     runner_log = env_runner.run(policy)
@@ -253,7 +260,7 @@ class EDMWorkspace(BaseWorkspace):
                     t_time = 0
                     count = 0
                     if (self.epoch % cfg.training.val_every) == 0:
-                        with torch.no_grad():
+                        with torch.no_grad(): # 关闭自动微分 不跟踪梯度计算
                             val_losses = list()
                             val_mse_error = list()
                             with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
@@ -339,7 +346,7 @@ class EDMWorkspace(BaseWorkspace):
                     if cfg.checkpoint.save_last_snapshot:
                         self.save_snapshot()
 
-                    # sanitize metric names
+                    # sanitize metric names  清理指标名称
                     metric_dict = dict()
                     for key, value in step_log.items():
                         new_key = key.replace('/', '_')
