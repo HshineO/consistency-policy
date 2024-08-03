@@ -24,8 +24,8 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             imagenet_norm: bool=False
         ):
         """
-        Assumes rgb input: B,C,H,W
-        Assumes low_dim input: B,D
+        Assumes rgb input: B,C,H,W   Batch size,Channel,Height,Width
+        Assumes low_dim input: B,D   Batch size,Dimension
         """
         super().__init__()
 

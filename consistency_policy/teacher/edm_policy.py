@@ -29,7 +29,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             n_action_steps, 
             n_obs_steps,
             obs_as_global_cond=True,
-            crop_shape=(76, 76),
+            crop_shape=(76, 76), # 裁剪尺寸
             diffusion_step_embed_dim=128,
             down_dims=(256,512,1024),
             kernel_size=5,
@@ -44,7 +44,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
 
         # parse shape_meta
         action_shape = shape_meta['action']['shape']
-        assert len(action_shape) == 1
+        assert len(action_shape) == 1  # 如果 action_shape 的长度不是1，程序会抛出 AssertionError。
         action_dim = action_shape[0]
         obs_shape_meta = shape_meta['obs']
         obs_config = {
@@ -58,7 +58,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             shape = attr['shape']
             obs_key_shapes[key] = list(shape)
 
-            type = attr.get('type', 'low_dim')
+            type = attr.get('type', 'low_dim') # 获取类型  默认为low_dim
             if type == 'rgb':
                 obs_config['rgb'].append(key)
             elif type == 'low_dim':
@@ -77,6 +77,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             # set config with shape_meta
             config.observation.modalities.obs = obs_config
 
+            # 处理图像裁剪设置，要么禁用随机裁剪，要么设置特定的裁剪尺寸。
             if crop_shape is None:
                 for key, modality in config.observation.encoder.items():
                     if modality.obs_randomizer_class == 'CropRandomizer':
@@ -92,7 +93,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         # init global state
         ObsUtils.initialize_obs_utils_with_config(config)
 
-        # load model
+        # load model  robommic的BC-RNN模型  我们获取他的观测编码器部分
         policy: PolicyAlgo = algo_factory(
                 algo_name=config.algo_name,
                 config=config,
@@ -107,7 +108,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             # replace batch norm with group norm
             replace_submodules(
                 root_module=obs_encoder,
-                predicate=lambda x: isinstance(x, nn.BatchNorm2d),
+                predicate=lambda x: isinstance(x, nn.BatchNorm2d), # 这是一个判断函数，用于确定哪些子模块需要被替换。
                 func=lambda x: nn.GroupNorm(
                     num_groups=x.num_features//16, 
                     num_channels=x.num_features)
@@ -180,14 +181,14 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             ):
         model = self.model
         scheduler = self.noise_scheduler
-
+        # 从噪声中采样 得到初始轨迹
         trajectory = scheduler.sample_inital_position(condition_data, generator=generator)
     
         timesteps = torch.arange(0, self.noise_scheduler.bins, device=condition_data.device)
         for b, next_b in zip(timesteps[:-1], timesteps[1:]):
             trajectory[condition_mask] = condition_data[condition_mask]
 
-            t = scheduler.timesteps_to_times(b)
+            t = scheduler.timesteps_to_times(b)  # 不是均匀采样
             next_t = scheduler.timesteps_to_times(next_b)
 
             denoise = lambda traj, t: model(traj, t, local_cond=local_cond, global_cond=global_cond)
@@ -210,7 +211,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         # normalize input
         nobs = self.normalizer.normalize(obs_dict)
         value = next(iter(nobs.values()))
-        B, To = value.shape[:2]
+        B, To = value.shape[:2]  # Batch size , Tobservation
         T = self.horizon
         Da = self.action_dim
         Do = self.obs_feature_dim
@@ -224,8 +225,9 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         local_cond = None
         global_cond = None
         if self.obs_as_global_cond:
-            # condition through global feature
-            this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
+            # condition through global feature 对 nobs 字典中的每个值进行处理,将其中前 To 个时间步的数据提取出来,并将其展平为二维张量。
+            # x[:,:To,...] 每个值 x 中提取前 To 个时间步的数据  # reshape B, T, ... to B*T, ...
+            this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:])) # -1 表示这个维度的大小由 PyTorch 自动计算得出,以确保总元素数不变。*x.shape[2:] 指定了新张量的后几个维度的大小,与原张量的后几个维度一致。
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
@@ -298,8 +300,8 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
-            cond_data = torch.cat([nactions, nobs_features], dim=-1)
-            trajectory = cond_data.detach()
+            cond_data = torch.cat([nactions, nobs_features], dim=-1) #把action数据和observe数据拼接
+            trajectory = cond_data.detach() #将拼接后的条件数据从计算图中分离出来,作为后续的轨迹数据使用。
 
         # generate impainting mask
         condition_mask = self.mask_generator(trajectory.shape)

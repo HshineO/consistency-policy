@@ -203,7 +203,8 @@ class Karras_Scheduler():
         transformed_samples = transformed_samples.clamp(sigma_min, sigma_max)
         return transformed_samples, transformed_samples
 
-    def timesteps_to_times(self, timesteps: torch.LongTensor):
+    # EDM论文 eq5
+    def timesteps_to_times(self, timesteps: torch.LongTensor): 
         t = self.time_max ** (1 / self.rho) + timesteps / (self.bins - 1) * (
             self.time_min ** (1 / self.rho) - self.time_max ** (1 / self.rho)
         )
@@ -244,6 +245,8 @@ class Karras_Scheduler():
         return (times**2 + self.data_std**2)/((times * self.data_std)**2)
     
     # ==================== PARAMETIRIZATIONS ====================
+
+    #EDM论文eq7
     def get_scalings(self, time):
         c_skip = self.data_std**2 / (time**2 + self.data_std**2)
         c_out = time * self.data_std / ((time**2 + self.data_std**2) ** 0.5)
@@ -268,7 +271,7 @@ class Karras_Scheduler():
     def euler_solver(self, model, samples, t, next_t, clamp = False):
         dims = samples.ndim
         y = samples
-        step = append_dims((next_t - t), dims)
+        step = append_dims((next_t - t), dims)  # 扩展到和sample一样的维度 ## 后面填充的都是None？
         
         denoisedy = self.calc_out(model, y, t, clamp = clamp)
         dy = (y - denoisedy) / append_dims(t, dims)
@@ -373,6 +376,11 @@ class Karras_Scheduler():
     @staticmethod
     def trajectory_time_product(traj: torch.Tensor, times: torch.Tensor):
         return torch.einsum("b T D, b -> b T D ", traj, times)
+    # 使用 torch.einsum() 函数进行张量运算,公式为 "b T D, b -> b T D"。
+    # 这个公式的意思是:
+    # 从左侧张量 traj 中,取 b 个批次的 T 个时间步和 D 个特征维度。
+    # 从右侧张量 times 中,取 b 个批次的值。
+    # 将左侧张量和右侧张量进行逐元素乘法,得到一个新的 (b, T, D) 形状的张量。
     
 class PFGMPP_Scheduler(Karras_Scheduler):
     def __init__(self,

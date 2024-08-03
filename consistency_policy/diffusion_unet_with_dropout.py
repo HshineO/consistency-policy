@@ -93,9 +93,9 @@ class ConditionalUnet1D(nn.Module):
 
         dsed = diffusion_step_embed_dim
         diffusion_step_encoder = nn.Sequential(
-            SinusoidalPosEmb(dsed),
-            nn.Linear(dsed, dsed * 4),
-            nn.Mish(),
+            SinusoidalPosEmb(dsed),     # 正弦函数生成位置编码
+            nn.Linear(dsed, dsed * 4),  # 全连接
+            nn.Mish(),                  # 激活函数
             nn.Linear(dsed * 4, dsed),
         )
         cond_dim = dsed
