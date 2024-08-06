@@ -252,7 +252,7 @@ class Karras_Scheduler():
         c_out = time * self.data_std / ((time**2 + self.data_std**2) ** 0.5)
         c_in = 1 / (time**2 + self.data_std**2) ** 0.5
         return c_skip, c_out, c_in
-
+    # EDM 论文 Table 1
     def get_scalings_for_boundary_condition(self, time):
         c_skip = self.data_std**2 / (
             (time - self.time_min) ** 2 + self.data_std**2
@@ -726,7 +726,8 @@ def Huber_Loss(pred, target, delta = 0, weights = None):
 
     if weights is not None:
         loss = torch.einsum("b T D, b -> b T D", loss, weights)
-
+    # 操作通过在批量维度上执行矩阵乘法，将 loss 张量与 weights 张量进行元素级加权。结
+    # 果是一个与 loss 张量形状相同的新张量，每个元素都是相应 loss 和 weights 张量元素的乘积。
 
 
     return loss.mean()

@@ -91,6 +91,7 @@ class ConditionalUnet1D(nn.Module):
 
         self.dropout_rate = dropout_rate
 
+        # 时间（步数step）编码
         dsed = diffusion_step_embed_dim
         diffusion_step_encoder = nn.Sequential(
             SinusoidalPosEmb(dsed),     # 正弦函数生成位置编码
@@ -104,6 +105,7 @@ class ConditionalUnet1D(nn.Module):
 
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
 
+        # 条件编码
         local_cond_encoder = None
         if local_cond_dim is not None:
             _, dim_out = in_out[0]
@@ -121,7 +123,7 @@ class ConditionalUnet1D(nn.Module):
                     cond_predict_scale=cond_predict_scale)
             ])
 
-        mid_dim = all_dims[-1]
+        mid_dim = all_dims[-1] # 从一个名为 all_dims 的列表中获取最后一个元素,并将其赋值给变量 mid_dim。
         self.mid_modules = nn.ModuleList([
             ConditionalResidualBlock1D(
                 mid_dim, mid_dim, cond_dim=cond_dim,
