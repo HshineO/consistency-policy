@@ -132,8 +132,8 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         # create diffusion model
         obs_feature_dim = obs_encoder.output_shape()[0]
         input_dim = action_dim + obs_feature_dim
-        global_cond_dim = None
-        if obs_as_global_cond:
+        global_cond_dim = None  
+        if obs_as_global_cond:       # 这里和dp不同，dp如果obs作为condition，cond_dim=obs_feature_dim    
             input_dim = action_dim
             global_cond_dim = obs_feature_dim * n_obs_steps
 
@@ -148,7 +148,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
-        model.prepare_drop_generators()
+        model.prepare_drop_generators() # 配置dropout层  防止过拟合
 
         self.obs_encoder = obs_encoder
         self.model = model
@@ -291,7 +291,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, 
                 lambda x: x[:,:self.n_obs_steps,...].reshape(-1,*x.shape[2:]))
-            nobs_features = self.obs_encoder(this_nobs)
+            nobs_features = self.obs_encoder(this_nobs) # 观测编码器 
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
         else:

@@ -71,20 +71,20 @@ class LowdimMaskGenerator(ModuleAttrMixin):
         dim_mask = torch.zeros(size=shape, 
             dtype=torch.bool, device=device)
         is_action_dim = dim_mask.clone()
-        is_action_dim[...,:self.action_dim] = True
+        is_action_dim[...,:self.action_dim] = True # 将 is_action_dim 张量的前 self.action_dim 个元素设置为 True。这表示动作维度的范围。
         is_obs_dim = ~is_action_dim
 
         # generate obs mask
-        if self.fix_obs_steps:
+        if self.fix_obs_steps: # 固定obs步数
             obs_steps = torch.full((B,), 
             fill_value=self.max_n_obs_steps, device=device)
         else:
-            obs_steps = torch.randint(
+            obs_steps = torch.randint( # 随机obs步数
                 low=1, high=self.max_n_obs_steps+1, 
                 size=(B,), generator=rng, device=device)
             
         steps = torch.arange(0, T, device=device).reshape(1,T).expand(B,T)
-        obs_mask = (steps.T < obs_steps).T.reshape(B,T,1).expand(B,T,D)
+        obs_mask = (steps.T < obs_steps).T.reshape(B,T,1).expand(B,T,D) # .T 转置
         obs_mask = obs_mask & is_obs_dim
 
         # generate action mask

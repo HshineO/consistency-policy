@@ -130,7 +130,7 @@ class EDMWorkspace(BaseWorkspace):
                 cfg.ema,
                 model=self.ema_model)
 
-        if cfg.training.online_rollouts:
+        if cfg.training.online_rollouts:  # 训练时在线仿真  dp没有
             # configure env here
             env_runner: BaseImageRunner
             env_runner = hydra.utils.instantiate(
@@ -267,9 +267,9 @@ class EDMWorkspace(BaseWorkspace):
                                     leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                                 for batch_idx, batch in enumerate(tepoch):
                                     batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
-                                    loss = self.model.compute_loss(batch)
+                                    loss = self.model.compute_loss(batch) # 每个epoch都计算loss
                                     
-                                    if (self.epoch % cfg.training.val_sample_every) == 0:
+                                    if (self.epoch % cfg.training.val_sample_every) == 0: # 每多少个epoch进行一次验证集的采样验证，生成action计算mse
                                         obs_dict = batch['obs']
                                         gt_action = batch['action']
 

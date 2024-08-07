@@ -18,7 +18,7 @@ class ConditionalResidualBlock1D(nn.Module):
             cond_dim,
             kernel_size=3,
             n_groups=8,
-            cond_predict_scale=False,
+            cond_predict_scale=False, # FiLM模块是否输出SCALE
             dropout_rate=.2):
         super().__init__()
 
@@ -37,10 +37,10 @@ class ConditionalResidualBlock1D(nn.Module):
         self.cond_encoder = nn.Sequential(
             nn.Mish(),
             nn.Linear(cond_dim, cond_channels),
-            Rearrange('batch t -> batch t 1'),
+            Rearrange('batch t -> batch t 1'), # 将输入张量的维度从 (batch, t) 变换为 (batch, t, 1)
         )
 
-        # make sure dimensions compatible
+        # make sure dimensions compatible 在差分通路上加入1*1卷积来调整维度
         self.residual_conv = nn.Conv1d(in_channels, out_channels, 1) \
             if in_channels != out_channels else nn.Identity()
 
@@ -59,14 +59,14 @@ class ConditionalResidualBlock1D(nn.Module):
         out = self.blocks[0](x)
         out = self.scale_dropout(out)
         embed = self.cond_encoder(cond)
-        if self.cond_predict_scale:
+        if self.cond_predict_scale: # 如果输出SCALE 调整为两部分
             embed = embed.reshape(
                 embed.shape[0], 2, self.out_channels, 1)
             scale = embed[:,0,...]
             bias = embed[:,1,...]
             out = scale * out + bias
         else:
-            out = out + embed
+            out = out + embed # 仅输出bias
         out = self.blocks[1](out)
         out = out + self.residual_conv(x)
         out = self.bias_dropout(out)
@@ -76,7 +76,7 @@ class ConditionalResidualBlock1D(nn.Module):
 class ConditionalUnet1D(nn.Module):
     def __init__(self, 
         input_dim,
-        local_cond_dim=None,
+        local_cond_dim=None, # = none in edm
         global_cond_dim=None,
         diffusion_step_embed_dim=256,
         down_dims=[256,512,1024],
@@ -86,7 +86,7 @@ class ConditionalUnet1D(nn.Module):
         dropout_rate=.0,
         ):
         super().__init__()
-        all_dims = [input_dim] + list(down_dims)
+        all_dims = [input_dim] + list(down_dims) # 将input_dim添加到down_dims列表的开头
         start_dim = down_dims[0]
 
         self.dropout_rate = dropout_rate
@@ -101,13 +101,13 @@ class ConditionalUnet1D(nn.Module):
         )
         cond_dim = dsed
         if global_cond_dim is not None:
-            cond_dim += global_cond_dim
+            cond_dim += global_cond_dim # 加上全局条件（观测）的维度
 
-        in_out = list(zip(all_dims[:-1], all_dims[1:]))
+        in_out = list(zip(all_dims[:-1], all_dims[1:])) # 每层的输入输出维度
 
         # 条件编码
         local_cond_encoder = None
-        if local_cond_dim is not None:
+        if local_cond_dim is not None: # none
             _, dim_out = in_out[0]
             dim_in = local_cond_dim
             local_cond_encoder = nn.ModuleList([
@@ -138,7 +138,7 @@ class ConditionalUnet1D(nn.Module):
         ])
 
         down_modules = nn.ModuleList([])
-        for ind, (dim_in, dim_out) in enumerate(in_out):
+        for ind, (dim_in, dim_out) in enumerate(in_out): # 根据输入输出的维度确定有多少层
             is_last = ind >= (len(in_out) - 1)
             down_modules.append(nn.ModuleList([
                 ConditionalResidualBlock1D(
@@ -229,7 +229,7 @@ class ConditionalUnet1D(nn.Module):
         
         # encode local features
         h_local = list()
-        if local_cond is not None:
+        if local_cond is not None: # none
             local_cond = einops.rearrange(local_cond, 'b h t -> b t h')
             resnet, resnet2 = self.local_cond_encoder
             x = resnet(local_cond, global_feature)
