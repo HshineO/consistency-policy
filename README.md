@@ -27,3 +27,17 @@ Techaer 模型基于 EDM 框架搭建，使用如下命令开始训练：
 ```consle
 $ touch outputs/edm/square/logs.json.txt
 ```
+如果 wandb 提示连接失败，可以在配置文件中改为离线模式
+```yaml
+logging:
+  group: null
+  id: null
+  mode: offline # online
+  name: dp_test
+  project: diffusion_policy_debug
+  resume: true
+  tags:
+  - train_diffusion_unet_hybrid
+  - square_image
+  - default
+```
