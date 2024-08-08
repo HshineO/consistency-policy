@@ -67,7 +67,7 @@ policy:
   eval_fixed_crop: true
   horizon: 16
   kernel_size: 5
-  n_action_steps: 8
+  n_action_steps: 8  # 在dp中是 = n_action_steps + n_latency_steps , 但是 n_latecy_steps = 0
   n_groups: 8
   n_obs_steps: 2
   delta: -1
@@ -265,8 +265,8 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 400
-  resume: false
+  num_epochs: 400  # dp 中 3050
+  resume: false   # 从 check point 恢复训练
   resume_path: ???
   rollout_every: 50
   sample_every: 5

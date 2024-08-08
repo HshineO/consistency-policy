@@ -133,7 +133,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         obs_feature_dim = obs_encoder.output_shape()[0]
         input_dim = action_dim + obs_feature_dim
         global_cond_dim = None  
-        if obs_as_global_cond:       # 这里和dp不同，dp如果obs作为condition，cond_dim=obs_feature_dim    
+        if obs_as_global_cond: 
             input_dim = action_dim
             global_cond_dim = obs_feature_dim * n_obs_steps
 
@@ -148,7 +148,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
-        model.prepare_drop_generators() # 配置dropout层  防止过拟合
+        model.prepare_drop_generators() # 配置dropout层  防止过拟合 dp没有
 
         self.obs_encoder = obs_encoder
         self.model = model
@@ -182,7 +182,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         model = self.model
         scheduler = self.noise_scheduler
         # 从噪声中采样 得到初始轨迹
-        trajectory = scheduler.sample_inital_position(condition_data, generator=generator)
+        trajectory = scheduler.sample_inital_position(condition_data, generator=generator) # 仅使用了condition_data的维度信息
     
         timesteps = torch.arange(0, self.noise_scheduler.bins, device=condition_data.device)
         for b, next_b in zip(timesteps[:-1], timesteps[1:]):
@@ -233,7 +233,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
             global_cond = nobs_features.reshape(B, -1)
             # empty data for action
             cond_data = torch.zeros(size=(B, T, Da), device=device, dtype=dtype)
-            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)        # all false
         else:
             # condition through impainting
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
@@ -308,7 +308,7 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
 
 
         # Sample a random timestep for each image
-        times, _ = self.noise_scheduler.sample_times(trajectory)
+        times, _ = self.noise_scheduler.sample_times(trajectory) # time sampler = self.time_sampler
 
         # Add noise to the clean images according to the noise magnitude at each timestep
         # (this is the forward diffusion process)
@@ -318,8 +318,9 @@ class KarrasUnetHybridImagePolicy(BaseImagePolicy):
         loss_mask = ~condition_mask
 
         # apply conditioning
-        noisy_trajectory[condition_mask] = cond_data[condition_mask]
-        
+        noisy_trajectory[condition_mask] = cond_data[condition_mask]  
+        # 在obs as global cond情况下，cond_data = trajectroy = nactions ，且生成 mask 时 obs_dim = 0 这行不起作用
+          
         # Predict the initial state
         denoise = lambda traj, t: self.model(traj, t, local_cond=local_cond, global_cond=global_cond)
         pred = self.noise_scheduler.calc_out(denoise, noisy_trajectory, times, clamp=False)

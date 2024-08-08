@@ -93,7 +93,7 @@ class EDMWorkspace(BaseWorkspace):
                 normalizer = load_normalizer(workspace_state_dict)
                 self.model.set_normalizer(normalizer)
 
-        if not cfg.training.inference_mode:
+        if not cfg.training.inference_mode: # dp 没有这个条件
             # configure dataset
             dataset: BaseImageDataset
             dataset = hydra.utils.instantiate(cfg.task.dataset)
@@ -130,7 +130,7 @@ class EDMWorkspace(BaseWorkspace):
                 cfg.ema,
                 model=self.ema_model)
 
-        if cfg.training.online_rollouts:  # 训练时在线仿真  dp没有
+        if cfg.training.online_rollouts:  # 训练时在线仿真  
             # configure env here
             env_runner: BaseImageRunner
             env_runner = hydra.utils.instantiate(
