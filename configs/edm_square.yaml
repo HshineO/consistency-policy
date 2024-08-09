@@ -177,7 +177,7 @@ task:
           shape:
           - 2
     use_cache: true
-    val_ratio: 0.02
+    val_ratio: 0.2 # 0.02
   dataset_path:  ../dataset/image_abs.hdf5 # data/robomimic/datasets/square/ph/image_abs.hdf5
   dataset_type: ph
   env_runner:
@@ -191,9 +191,9 @@ task:
     n_envs: 1
     n_obs_steps: 2
     n_test: 50
-    n_test_vis: 16
-    n_train: 2
-    n_train_vis: 2
+    n_test_vis: 50 # 16
+    n_train: 0 # 2
+    n_train_vis: 0 # 2
     past_action: false
     render_obs_key: agentview_image
     shape_meta:
