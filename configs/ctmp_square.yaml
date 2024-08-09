@@ -78,7 +78,7 @@ policy:
   use_kde: False
   kde_samples: 0
   #warm start
-  edm: ??? 
+  edm: ???   # teacher 模型 checkpoint文件路径
   losses: [["ctm", "dsm"], [1, 1]]
   ctm_sampler: ctm
   dsm_weights: "karras"

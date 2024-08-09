@@ -101,7 +101,7 @@ class Karras_Scheduler():
         if times.ndim > 1:
             times = reduce_dims(times, 1)
                
-        rescaled_times = 1000 * 0.25 * torch.log(times + 1e-44) # *1000 to make it more stable
+        rescaled_times = 1000 * 0.25 * torch.log(times + 1e-44) # *1000 to make it more stable  # EDM论文中的 c_noise(sigma)
         model_output = model(trajectory * c_in, rescaled_times)
 
         out = model_output * c_out + trajectory * c_skip

@@ -229,8 +229,8 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
         self.chaining_steps = 1
         self.debug = False
 
-        self.losses = {}
-        for loss, weight in zip(losses[0], losses[1]):
+        self.losses = {} # 存储 ctm 和 dsm 损失的权重 即CP论文中eq8的的 alpha beta
+        for loss, weight in zip(losses[0], losses[1]): # losses = [["ctm", "dsm"], [1, 1]]
             self.losses[loss] = weight
         
         self.dsm_weights = dsm_weights
@@ -278,6 +278,7 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
         trajectory[condition_mask] = condition_data[condition_mask]
 
         # 2. predict model output, WHICH IS NOW THE ACTUAL PREDICTION
+        # denoise from T->0
         out = self._forward(self.model,
                             trajectory, t, s, local_cond=local_cond, 
                             global_cond=global_cond, clamp=True) #clamp at inference time
@@ -285,19 +286,19 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
         # finally make sure conditioning is enforced
         out[condition_mask] = condition_data[condition_mask]
 
-
+        # chain = Ture 使用三步推理
         if self.chain == False:
             return out
         
         for t in self.chaining_times[1:]:
             t = torch.tensor([float(t)], device = condition_data.device)
-            if self.chaining_times[0] == "C":
+            if self.chaining_times[0] == "C": # 使用EDM论文中eq5来根据sigma确定时间步长度
                 t = self.noise_scheduler.timesteps_to_times(t)
             s = torch.tensor([self.noise_scheduler.time_min], device = condition_data.device)
-
+            # noise from 0 to t1/t2
             trajectory = self.noise_scheduler.add_noise(out, t)
             # trajectory = self.noise_scheduler.trajectory_time_product(out, t)
-
+            # denoise from t1/t2 to 0 
             out = self._forward(self.model, trajectory, t, s, 
                                     local_cond=local_cond, global_cond=global_cond, clamp=True)
 
@@ -349,7 +350,7 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
 
         # run sampling
         if self.use_kde and B == 1:
-            cond_data = cond_data.repeat(self.kde_samples, 1, 1)
+            cond_data = cond_data.repeat(self.kde_samples, 1, 1) # 复制 kde_samples 次
             cond_mask = cond_mask.repeat(self.kde_samples, 1, 1)
             global_cond = global_cond.repeat(self.kde_samples, 1)
             nsample = self.conditional_sample(
@@ -365,6 +366,7 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
             action_pred = action_pred.reshape(self.kde_samples, -1)
             kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(action_pred)
 
+            # 使用KDE（核密度估计）来选择一个得分最高的最优的动作
 
             log_dens = kde.score_samples(action_pred)
             idx = np.argmax(log_dens)
@@ -456,11 +458,12 @@ class CTMPPUnetHybridImagePolicy(BaseImagePolicy):
             #like this doesn't work b/c its a batch dimension but also not having this vectorized is going to make it soo slow
             distances = u - t
             max_d = torch.max(distances)
-
+            # 理论上这里应该用 for d in range(max_d):
             # TODO: shape error when we use max_d, doesn't matter when we have small ode max steps
-            for d in range(self.noise_scheduler.ode_steps_max):
+            for d in range(self.noise_scheduler.ode_steps_max): # 这样的话就是固定 u 和 t 中间只差1个step
                 ct = torch.stack([(t_i + d).clamp(int(t_i.item()), int(u_i.item())) for t_i, u_i in zip(t, u)])
                 nt = torch.stack([(t_i + d + 1).clamp(int(t_i.item()), int(u_i.item())) for t_i, u_i in zip(t, u)])
+                # 这行代码计算了当前时间步 t 加上循环变量 d 的结果,并将其限制在 t 和 u 的取值范围内。再用stack堆叠成一个张量
 
                 current_times = self.noise_scheduler.timesteps_to_times(ct)
                 next_times = self.noise_scheduler.timesteps_to_times(nt)
