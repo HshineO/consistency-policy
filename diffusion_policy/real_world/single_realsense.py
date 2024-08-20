@@ -278,8 +278,8 @@ class SingleRealsense(mp.Process):
     # ========= interval API ===========
     def run(self):
         # limit threads
-        threadpool_limits(1)
-        cv2.setNumThreads(1)
+        # threadpool_limits(1)
+        # cv2.setNumThreads(1)
 
         w, h = self.resolution
         fps = self.capture_fps

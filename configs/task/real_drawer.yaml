@@ -1,0 +1,52 @@
+name: real_drawer
+
+image_shape: &image_shape [3, 120, 160]
+shape_meta: &shape_meta
+  # acceptable types: rgb, low_dim
+  obs:
+    mid:
+      shape: *image_shape
+      type: rgb
+    right:
+      shape: *image_shape
+      type: rgb
+    qpos:
+      shape: [7]
+      type: low_dim
+  action:
+    shape: [7]
+
+# env_runner:
+#   _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
+#   dataset_path: /home/clear/dataset/robomimic/square_test/image_abs.hdf5  #*dataset_path
+#   shape_meta: *shape_meta
+#   n_train: 0
+#   n_train_vis: 0
+#   train_start_idx: 0
+#   n_test: 50
+#   n_test_vis: 0
+#   test_start_seed: 100000
+#   max_steps: 400
+#   n_obs_steps: ${n_obs_steps}
+#   n_action_steps: ${n_action_steps}
+#   render_obs_key: 'agentview_image'
+#   fps: 10
+#   crf: 22
+#   past_action: ${past_action_visible}
+#   abs_action: True #*abs_action
+#   tqdm_interval_sec: 1.0
+#   n_envs: 25
+# # evaluation at this config requires a 16 core 64GB instance.
+
+dataset:
+  _target_: diffusion_policy.dataset.aloha_image_dataset.AlohaImageDataset
+  dataset_dir: /home/clear/dataset/real_folder_160_120
+  shape_meta: *shape_meta
+  num_episodes: 100
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  use_cache: True
+  seed: 42
+  val_ratio: 0.2
+  max_train_episodes: null

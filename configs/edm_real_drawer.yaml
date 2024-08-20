@@ -1,0 +1,129 @@
+defaults:
+  - _self_
+  - task: real_drawer
+
+name: train_edm_real_drawer
+_target_: consistency_policy.teacher.edm_workspace.EDMWorkspace
+
+task_name: ${task.name}
+shape_meta: ${task.shape_meta}
+exp_name: ${task.name}
+
+
+checkpoint:
+  save_last_ckpt: true
+  save_last_snapshot: false
+  topk:
+    format_str: epoch={epoch:04d}-val_mse_error={val_mse_error:.3f}.ckpt
+    k: 5
+    mode: min
+    monitor_key: val_mse_error
+dataloader:
+  batch_size: 64
+  num_workers: 8
+  persistent_workers: false
+  pin_memory: true
+  shuffle: true
+dataset_obs_steps: 2
+ema:
+  _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
+  inv_gamma: 1.0
+  max_value: 0.9999
+  min_value: 0.0
+  power: 0.75
+  update_after_step: 0
+# exp_name: default
+horizon: 16
+keypoint_visible_rate: 1.0
+logging:
+  group: null
+  id: null
+  mode: online
+  name: edm-real
+  project: consistency-policy
+  resume: true
+  tags:
+  - teacher
+  - real-drawer
+multi_run:
+  run_dir: data/outputs/2022.12.29/22.31.27_train_diffusion_unet_hybrid_square_image
+  wandb_name_base: consistency
+n_action_steps: 8
+n_latency_steps: 0
+n_obs_steps: 2
+# name: edm-real-drawer
+obs_as_global_cond: true
+optimizer:
+  _target_: torch.optim.AdamW
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.0001
+  weight_decay: 1.0e-06
+past_action_visible: false
+policy:
+  _target_: consistency_policy.teacher.edm_policy.KarrasUnetHybridImagePolicy
+  inference_mode: none # this will be populated automatically from training.inference_mode, do not set it here
+  cond_predict_scale: true
+  crop_shape:
+  - 108
+  - 144
+  diffusion_step_embed_dim: 128
+  down_dims:
+  - 512
+  - 1024
+  - 2048
+  eval_fixed_crop: true
+  horizon: 16
+  kernel_size: 5
+  n_action_steps: 8  # 在dp中是 = n_action_steps + n_latency_steps , 但是 n_latecy_steps = 0
+  n_groups: 8
+  n_obs_steps: 2
+  delta: -1
+  noise_scheduler:
+    _target_: consistency_policy.diffusion.Karras_Scheduler
+    time_min: 0.02
+    time_max: 80.0
+    rho: 7.0
+    bins: 80
+    solver: heun
+    time_sampler: log_normal
+    scaling: boundary
+    use_c_in: true
+    data_std: .5
+    clamp: true
+    name: heun80
+  obs_as_global_cond: true
+  obs_encoder_group_norm: true
+  shape_meta: ${task.shape_meta}
+
+
+training:
+  inference_mode: false # Setting this to true disables the teacher, warm start, and training loop
+  online_rollouts: false # Setting this to false disables the env_runner
+  checkpoint_every: 50
+  debug: false
+  device: cuda:0
+  gradient_accumulate_every: 1
+  lr_scheduler: cosine
+  lr_warmup_steps: 500
+  max_train_steps: null
+  max_val_steps: null
+  num_epochs: 400  # dp 中 3050
+  resume: false   # 从 check point 恢复训练
+  resume_path: ???
+  rollout_every: 50
+  sample_every: 50
+  seed: 42
+  tqdm_interval_sec: 1.0
+  use_ema: true
+  val_every: 50
+  val_sample_every: 50
+  output_dir: outputs/edm/real_drawer
+val_dataloader:
+  batch_size: 64
+  num_workers: 8
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false

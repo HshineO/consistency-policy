@@ -8,11 +8,18 @@ checkpoint:
     mode: max
     monitor_key: test_mean_score
 dataloader:
-  batch_size: 64
-  num_workers: 8
+  batch_size: 128
+  num_workers: 24
   persistent_workers: false
   pin_memory: true
   shuffle: true
+
+val_dataloader:
+  batch_size: 128
+  num_workers: 24
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false
 dataset_obs_steps: 2
 ema:
   _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
@@ -27,7 +34,7 @@ keypoint_visible_rate: 1.0
 logging:
   group: null
   id: null
-  mode: online
+  mode: offline
   name: dp_test
   project: diffusion_policy_debug
   resume: true
@@ -143,7 +150,7 @@ task:
   dataset:
     _target_: diffusion_policy.dataset.robomimic_replay_image_dataset.RobomimicReplayImageDataset
     abs_action: true
-    dataset_path: ../dataset/image_abs.hdf5 #data/robomimic/datasets/square/ph/image_abs.hdf5
+    dataset_path: /home/clear/consistency-policy-sjq/dataset/robomimic/datasets/square/ph/image_abs.hdf5 #data/robomimic/datasets/square/ph/image_abs.hdf5
     horizon: 16
     n_obs_steps: 2
     pad_after: 7
@@ -178,13 +185,13 @@ task:
           - 2
     use_cache: true
     val_ratio: 0.2 # 0.02
-  dataset_path:  ../dataset/image_abs.hdf5 # data/robomimic/datasets/square/ph/image_abs.hdf5
+  dataset_path:  /home/clear/consistency-policy-sjq/dataset/robomimic/datasets/square/ph/image_abs.hdf5 # data/robomimic/datasets/square/ph/image_abs.hdf5
   dataset_type: ph
   env_runner:
     _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
     abs_action: true
     crf: 22
-    dataset_path:  ../dataset/image_abs.hdf5 # data/robomimic/datasets/square/ph/image_abs.hdf5
+    dataset_path:  /home/clear/consistency-policy-sjq/dataset/robomimic/datasets/square/ph/image_abs.hdf5 # data/robomimic/datasets/square/ph/image_abs.hdf5
     fps: 10
     max_steps: 250
     n_action_steps: 8
@@ -256,7 +263,7 @@ task:
 task_name: square_image
 training:
   inference_mode: false # Setting this to true disables the teacher, warm start, and training loop
-  online_rollouts: true # Setting this to false disables the env_runner
+  online_rollouts: false # Setting this to false disables the env_runner
   checkpoint_every: 50
   debug: false
   device: cuda:0
@@ -275,10 +282,4 @@ training:
   use_ema: true
   val_every: 1
   val_sample_every: 5
-  output_dir: outputs/edm/square
-val_dataloader:
-  batch_size: 64
-  num_workers: 8
-  persistent_workers: false
-  pin_memory: true
-  shuffle: false
+  output_dir: outputs/edm/test

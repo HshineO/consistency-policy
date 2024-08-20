@@ -40,8 +40,8 @@ class MultiCameraVisualizer(mp.Process):
         self.join()        
     
     def run(self):
-        cv2.setNumThreads(1)
-        threadpool_limits(1)
+        # cv2.setNumThreads(1)
+        # threadpool_limits(1)
         channel_slice = slice(None)
         if self.rgb_to_bgr:
             channel_slice = slice(None,None,-1)

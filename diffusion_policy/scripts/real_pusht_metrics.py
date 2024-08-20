@@ -46,8 +46,8 @@ def get_mask_metrics(target_mask, mask):
     return result
 
 def get_video_metrics(video_path, target_mask, use_tqdm=True):
-    threadpoolctl.threadpool_limits(1)
-    cv2.setNumThreads(1)
+    # threadpoolctl.threadpool_limits(1)
+    # cv2.setNumThreads(1)
 
     metrics = collections.defaultdict(list)
     with av.open(video_path) as container:
