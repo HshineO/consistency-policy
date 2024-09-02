@@ -19,16 +19,16 @@ checkpoint:
     mode: min
     monitor_key: val_mse_error
 dataloader:
-  batch_size: 128 #64
-  num_workers: 24 #16
-  persistent_workers: false
+  batch_size: 64 #64
+  num_workers: 8 #16
+  persistent_workers: true
   pin_memory: true
   shuffle: true
 
 val_dataloader:
-  batch_size: 128 #64
-  num_workers: 24 #16
-  persistent_workers: false
+  batch_size: 64 #64
+  num_workers: 8 #16
+  persistent_workers: true
   pin_memory: true
   shuffle: false
 
@@ -46,10 +46,10 @@ keypoint_visible_rate: 1.0
 logging:
   group: null
   id: null
-  mode: offline
-  name: ctm-student-bz256
+  mode: online
+  name: ctm-student-bz64
   project: consistency-policy-student
-  resume: true
+  resume: false
 multi_run:
   run_dir: data/outputs/cd/square/ctmpp
   wandb_name_base: dsm_test
